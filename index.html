@@ -142,16 +142,45 @@
   svg.chart { touch-action:pan-y; cursor:crosshair; }
   @media (prefers-reduced-motion: reduce) { #bubbles circle, #pipe path.flow, .toast { animation:none !important; } }
 
-  .chat { display:grid; gap:10px; }
-  #chatLog { display:flex; flex-direction:column; gap:8px; max-height:300px; min-height:140px; overflow:auto; padding:4px 2px; scroll-behavior:smooth; }
-  .msg { max-width:86%; padding:8px 12px; border-radius:14px; font-size:.92rem; white-space:pre-wrap; overflow-wrap:anywhere; animation:tin .2s ease-out; }
-  .msg.bot { align-self:flex-start; background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:4px; }
-  .msg.me { align-self:flex-end; background:var(--water-deep); color:#fff; border-bottom-right-radius:4px; }
-  .msg.typing { color:var(--muted); }
+  .chat { display:grid; gap:12px; }
+  .chat-head { display:flex; align-items:center; gap:12px; }
+  .avatar { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(135deg,var(--water),var(--water-deep)); color:#fff; font-size:1.15rem; box-shadow:0 0 0 4px var(--glow); flex:none; }
+  .chat-head b { display:block; line-height:1.2; }
+  .chat-head small { color:var(--muted); display:flex; align-items:center; gap:6px; font-size:.78rem; }
+  .cdot { width:8px; height:8px; border-radius:50%; background:var(--muted); display:inline-block; }
+  .cdot.on { background:var(--ok); box-shadow:0 0 0 0 var(--ok); animation:ping 2s infinite; }
+  #chatClear { margin-left:auto; padding:4px 12px; border-radius:999px; font-size:.8rem; min-height:0; }
+  #chatLog { display:flex; flex-direction:column; gap:10px; max-height:360px; min-height:200px; overflow:auto; padding:8px 2px; scroll-behavior:smooth; background:linear-gradient(var(--bg2), transparent 40%); border-radius:12px; }
+  .crow { display:flex; gap:8px; align-items:flex-end; }
+  .crow.me { justify-content:flex-end; }
+  .cav { width:26px; height:26px; border-radius:50%; flex:none; display:grid; place-items:center; font-size:.8rem; color:#fff; background:linear-gradient(135deg,var(--water),var(--water-deep)); }
+  .msg { max-width:min(86%, 540px); padding:9px 13px; border-radius:16px; font-size:.92rem; white-space:pre-wrap; overflow-wrap:anywhere; animation:tin .22s ease-out; }
+  .msg time { display:block; font-size:.66rem; opacity:.6; margin-top:3px; text-align:right; }
+  .msg.bot { background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:5px; }
+  .msg.me { background:linear-gradient(135deg,var(--water),var(--water-deep)); color:#fff; border-bottom-right-radius:5px; }
+  .msg.warn { border-color:var(--bad); background:var(--bad-bg); }
+  .msg.good { border-color:var(--ok); background:var(--ok-bg); }
+  .msg.card { white-space:normal; min-width:min(72%, 280px); }
+  .dots span { display:inline-block; width:6px; height:6px; margin:0 2px; border-radius:50%; background:var(--muted); animation:bnc 1s infinite; }
+  .dots span:nth-child(2) { animation-delay:.15s; } .dots span:nth-child(3) { animation-delay:.3s; }
+  @keyframes bnc { 0%,60%,100% { transform:translateY(0); opacity:.5; } 30% { transform:translateY(-5px); opacity:1; } }
+  .sbar { height:10px; border-radius:6px; background:var(--off-bg); overflow:hidden; margin:6px 0 4px; }
+  .sbar i { display:block; height:100%; background:linear-gradient(90deg,var(--water-deep),var(--water)); transition:width .6s ease; }
+  .sbar i.bad { background:var(--bad); } .sbar i.warn { background:var(--warn); }
+  .sbig { display:flex; align-items:baseline; gap:10px; }
+  .sbig b { font-size:1.9rem; font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+  .sbig span { font-size:.8rem; padding:2px 10px; border-radius:999px; background:var(--off-bg); }
+  .sbig span.ok { background:var(--ok-bg); color:var(--ok); } .sbig span.warn { background:var(--warn-bg); color:var(--warn); } .sbig span.bad { background:var(--bad-bg); color:var(--bad); }
+  .skv { display:grid; grid-template-columns:auto 1fr; gap:2px 12px; font-size:.84rem; margin-top:6px; }
+  .skv dt { color:var(--muted); } .skv dd { margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
+  .cbtns { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+  .cbtns button { padding:4px 12px; border-radius:999px; font-size:.8rem; min-height:0; }
   #chatForm { display:flex; gap:8px; }
   #chatForm input { flex:1; }
   #chatChips { display:flex; gap:6px; flex-wrap:wrap; }
-  #chatChips button { padding:5px 12px; border-radius:999px; font-size:.82rem; min-height:0; }
+  #chatChips button { padding:5px 12px; border-radius:999px; font-size:.82rem; min-height:0; transition:transform .12s, border-color .15s; }
+  #chatChips button:active, .cbtns button:active { transform:scale(.95); }
+  @media (prefers-reduced-motion: reduce) { .dots span, .cdot.on, .msg { animation:none !important; } .sbar i { transition:none; } }
 </style>
 </head>
 <body>
@@ -236,17 +265,21 @@
   </div>
 
     <section class="card chat" id="chatCard" style="margin-top:16px" aria-label="Asisten tangki">
-    <h2 style="margin:0">Asisten tangki</h2>
+    <div class="chat-head">
+      <div class="avatar" aria-hidden="true">&#128167;</div>
+      <div><b>Asisten Tangki</b><small><i class="cdot" id="chatDot"></i><span id="chatStatus">menunggu perangkat</span></small></div>
+      <button type="button" id="chatClear" title="Hapus percakapan">Bersihkan</button>
+    </div>
     <div id="chatLog" role="log" aria-live="polite"></div>
     <div id="chatChips">
-      <button type="button" data-q="status">Status</button>
-      <button type="button" data-q="nyalakan pompa">Nyalakan pompa</button>
-      <button type="button" data-q="matikan pompa">Matikan pompa</button>
-      <button type="button" data-q="kejadian terakhir">Kejadian terakhir</button>
-      <button type="button" data-q="bantuan">Bantuan</button>
+      <button type="button" data-q="status">&#128202; Status</button>
+      <button type="button" data-q="nyalakan pompa">&#128994; Nyalakan pompa</button>
+      <button type="button" data-q="matikan pompa">&#128308; Matikan pompa</button>
+      <button type="button" data-q="kejadian terakhir">&#128339; Kejadian terakhir</button>
+      <button type="button" data-q="bantuan">&#10067; Bantuan</button>
     </div>
     <form id="chatForm" autocomplete="off">
-      <input type="text" id="chatInput" placeholder="Ketik: status, nyalakan pompa, matikan pompa" aria-label="Pesan untuk asisten">
+      <input type="text" id="chatInput" placeholder="Tanya atau perintahkan: status, nyalakan pompa..." aria-label="Pesan untuk asisten">
       <button class="primary" type="submit">Kirim</button>
     </form>
   </section>
@@ -465,9 +498,11 @@
     state.online = true;
     chip($('chipDevice'), 'ok', 'ESP32: online (' + (m.device || 'esp32') + ')');
     renderStatus();
+    window.dispatchEvent(new CustomEvent('sw-status', { detail: m }));
     logEvent('Status: pompa ' + state.pump + ', mode ' + state.mode + ', buzzer ' + state.buzzer + '.');
   }
   function onAlert(m) {
+    window.dispatchEvent(new CustomEvent('sw-alert', { detail: m }));
     logEvent((m.type || 'ALERT') + ': ' + (m.message || '') + ' (level ' + (isFinite(Number(m.level_pct)) ? Number(m.level_pct).toFixed(1) : '?') + '%)', 'alert');
     var lv = isFinite(Number(m.level_pct)) ? Number(m.level_pct).toFixed(1) : '?';
     tgNotify(m.type || 'ALERT', (m.type === 'CRITICAL_HIGH' ? 'ALERT: tangki hampir meluap' : m.type === 'CRITICAL_LOW' ? 'ALERT: tangki hampir kosong' : 'ALERT Smart Water Tank'), 'Level air ' + lv + '%. ' + (m.message || ''));
@@ -717,49 +752,114 @@
   // ----- asisten obrolan (perintah teks, tanpa Telegram) -----
   (function chatbot() {
     var logEl = $('chatLog');
-    function say(text, who) {
-      var d = document.createElement('div'); d.className = 'msg ' + who; d.textContent = text;
-      logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; return d;
+    var pending = null;   // perintah pompa yang menunggu jawaban ESP32
+
+    function clockHM() { return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }); }
+    function mk(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+    function toEnd() { logEl.scrollTop = logEl.scrollHeight; }
+
+    // satu gelembung; mengembalikan elemen .msg supaya isinya bisa diganti (mis. dari "mengetik" menjadi jawaban)
+    function bubble(who, cls) {
+      var row = mk('div', 'crow ' + who);
+      if (who === 'bot') row.appendChild(mk('div', 'cav', '\uD83D\uDCA7'));
+      var msg = mk('div', 'msg ' + who + (cls ? ' ' + cls : ''));
+      row.appendChild(msg); logEl.appendChild(row);
+      while (logEl.children.length > 60) logEl.removeChild(logEl.firstChild);
+      toEnd(); return msg;
     }
-    function statusReply() {
-      var m = state.last;
-      if (!m) return 'Belum ada data dari ESP32. Jalankan Wokwi dan tunggu "[MQTT] ... berhasil".';
-      var age = Math.round((Date.now() - state.lastAt) / 1000);
-      return 'Level ' + Number(m.level_pct).toFixed(1) + '% (' + (STATUS_TEXT[m.status] || m.status) + ')\n' +
-        'Jarak sensor ' + Number(m.distance_cm).toFixed(1) + ' cm\n' +
-        'Pompa ' + state.pump + ' (' + state.mode + '), buzzer ' + state.buzzer + '\n' +
-        'Data terakhir ' + age + ' detik lalu';
+    function fill(msg, text) {
+      msg.textContent = text;
+      var t = mk('time', '', clockHM()); msg.appendChild(t); toEnd();
     }
+    function say(text, who, cls) { var m = bubble(who, cls); fill(m, text); return m; }
+    function typing() { var m = bubble('bot'); var d = mk('span', 'dots'); d.appendChild(mk('span')); d.appendChild(mk('span')); d.appendChild(mk('span')); m.appendChild(d); return m; }
+
+    function levelKind(st) { return st === 'normal' ? 'ok' : st === 'low' ? 'warn' : 'bad'; }
     function canSend() { return state.demo || !!(state.client && state.client.connected); }
-    function pumpReply(v) {
-      if (!canSend()) return 'Belum tersambung ke broker, jadi perintah belum bisa dikirim. Cek kartu Status sambungan.';
-      sendPump(v);
-      return 'Perintah pompa ' + v + ' dikirim. ESP32 menolak bila melanggar batas (ON di 85% ke atas, OFF di bawah 25%). Ketik "status" untuk melihat hasilnya.';
+
+    // kartu status: bar level, angka besar, rincian, dan tombol yang bisa ditekan (Refresh memperbarui kartu di tempat)
+    function renderStatusCard(msg) {
+      msg.className = 'msg bot card'; msg.textContent = '';
+      var m = state.last;
+      if (!m) { msg.textContent = 'Belum ada data dari ESP32. Jalankan Wokwi dan tunggu "[MQTT] ... berhasil".'; msg.appendChild(mk('time', '', clockHM())); return; }
+      var lvl = Number(m.level_pct), age = Math.round((Date.now() - state.lastAt) / 1000), kind = levelKind(m.status);
+      var big = mk('div', 'sbig'); big.appendChild(mk('b', '', lvl.toFixed(1) + '%')); big.appendChild(mk('span', kind, STATUS_TEXT[m.status] || m.status || '--'));
+      var bar = mk('div', 'sbar'); var fillBar = mk('i', kind === 'ok' ? '' : kind); fillBar.style.width = Math.max(0, Math.min(100, lvl)) + '%'; bar.appendChild(fillBar);
+      var dl = mk('dl', 'skv');
+      [['Jarak sensor', Number(m.distance_cm).toFixed(1) + ' cm'], ['Pompa', state.pump + ' (' + state.mode + ')'], ['Buzzer', state.buzzer === 'ON' ? 'BUNYI' : 'Mati'], ['Data terakhir', age + ' detik lalu'], ['Sumber', String(m.device || '').indexOf('sim') === 0 ? 'simulasi' : 'ESP32']].forEach(function (kv) {
+        dl.appendChild(mk('dt', '', kv[0])); dl.appendChild(mk('dd', '', kv[1]));
+      });
+      var btns = mk('div', 'cbtns');
+      [['Refresh', function () { renderStatusCard(msg); }], ['Pompa ON', function () { ask('nyalakan pompa'); }], ['Pompa OFF', function () { ask('matikan pompa'); }]].forEach(function (b) {
+        var bt = mk('button', '', b[0]); bt.type = 'button'; bt.addEventListener('click', b[1]); btns.appendChild(bt);
+      });
+      msg.appendChild(big); msg.appendChild(bar); msg.appendChild(dl); msg.appendChild(btns); msg.appendChild(mk('time', '', clockHM()));
+      toEnd();
     }
-    function recentReply() {
+
+    // perintah pompa: kirim, lalu tunggu jawaban status dari ESP32 dan laporkan hasilnya di gelembung yang sama
+    function pumpFlow(v, msg) {
+      if (!canSend()) { fill(msg, 'Belum tersambung ke broker, jadi perintah belum bisa dikirim. Cek kartu Status sambungan di atas.'); msg.classList.add('warn'); return; }
+      if (pending) { clearTimeout(pending.timer); }
+      sendPump(v);
+      fill(msg, '\u23F3 Mengirim perintah pompa ' + v + ' ke ESP32...');
+      pending = { want: v, msg: msg, timer: setTimeout(function () {
+        if (!pending) return;
+        fill(pending.msg, 'ESP32 belum menjawab dalam 12 detik. Cek apakah Wokwi sedang berjalan dan chip ESP32 di atas berwarna hijau.'); pending.msg.classList.add('warn'); pending = null;
+      }, 12000) };
+    }
+    window.addEventListener('sw-status', function (ev) {
+      if (!pending) return;
+      var m = ev.detail || {}; if (m.online === false) return;
+      var p = pending; pending = null; clearTimeout(p.timer);
+      if (m.pump === p.want) { fill(p.msg, '\u2705 Pompa sekarang ' + m.pump + (m.mode ? ' (' + m.mode + ')' : '') + '.'); p.msg.classList.add('good'); return; }
+      var lvl = state.last ? Number(state.last.level_pct) : NaN;
+      var why = p.want === 'ON' ? 'tangki sudah penuh (level 85% ke atas)' : 'level di bawah 25%, jadi pompa wajib menyala';
+      fill(p.msg, '\u26D4 ESP32 menolak perintah: ' + why + (isFinite(lvl) ? '. Level sekarang ' + lvl.toFixed(1) + '%.' : '.')); p.msg.classList.add('warn');
+    });
+    window.addEventListener('sw-alert', function (ev) {
+      var m = ev.detail || {};
+      var lv = isFinite(Number(m.level_pct)) ? Number(m.level_pct).toFixed(1) : '?';
+      var msg = bubble('bot', 'warn');
+      msg.textContent = '\uD83D\uDEA8 ' + (m.type === 'CRITICAL_HIGH' ? 'Tangki hampir meluap' : m.type === 'CRITICAL_LOW' ? 'Tangki hampir kosong' : 'Alert') + '. Level ' + lv + '%. ' + (m.message || '');
+      var btns = mk('div', 'cbtns'); var bt = mk('button', '', 'Lihat status'); bt.type = 'button'; bt.addEventListener('click', function () { ask('status'); }); btns.appendChild(bt);
+      msg.appendChild(btns); msg.appendChild(mk('time', '', clockHM())); toEnd();
+    });
+
+    function recentText() {
       var items = [].slice.call($('log').children).filter(function (li) { return li.className !== 'empty'; }).slice(0, 5);
       if (!items.length) return 'Belum ada kejadian.';
       return items.map(function (li) { return li.innerText.replace(/\s*\n\s*/g, '  '); }).join('\n');
     }
-    var HELP = 'Yang bisa saya lakukan:\n- status atau level: kondisi tangki sekarang\n- nyalakan pompa / matikan pompa\n- kejadian terakhir: 5 kejadian terbaru\nAnda juga bisa memakai tombol di bawah.';
-    function answer(q) {
-      var t = q.toLowerCase().trim();
-      if (/^\/?(bantuan|help|\?)$/.test(t) || /bisa apa/.test(t)) return HELP;
-      if (/(nyalakan|hidupkan|aktifkan|pompa[ _]?on|pompa nyala)/.test(t)) return pumpReply('ON');
-      if (/(matikan|hentikan|nonaktifkan|pompa[ _]?off|pompa mati)/.test(t)) return pumpReply('OFF');
-      if (/(kejadian|riwayat|alert|log)/.test(t)) return recentReply();
-      if (/(status|level|kondisi|air|berapa|tangki)/.test(t)) return statusReply();
-      return 'Saya belum paham. Coba "status", "nyalakan pompa", "matikan pompa", atau "bantuan".';
-    }
+    var HELP = 'Yang bisa saya lakukan:\n\u2022 status atau level: kartu kondisi tangki\n\u2022 nyalakan pompa / matikan pompa: kirim perintah dan lapor hasilnya\n\u2022 kejadian terakhir: 5 kejadian terbaru\nTombol di bawah juga bisa dipakai.';
+
     function ask(q) {
-      if (!q.trim()) return;
+      q = String(q || '').trim(); if (!q) return;
       say(q, 'me');
-      var typing = say('...', 'bot typing');
-      setTimeout(function () { typing.className = 'msg bot'; typing.textContent = answer(q); logEl.scrollTop = logEl.scrollHeight; }, 350);
+      var msg = typing();
+      setTimeout(function () {
+        var t = q.toLowerCase();
+        if (/^\/?(bantuan|help|\?)$/.test(t) || /bisa apa/.test(t)) { msg.textContent = ''; fill(msg, HELP); return; }
+        if (/(nyalakan|hidupkan|aktifkan|pompa[ _]?on|pompa nyala)/.test(t)) { msg.textContent = ''; pumpFlow('ON', msg); return; }
+        if (/(matikan|hentikan|nonaktifkan|pompa[ _]?off|pompa mati)/.test(t)) { msg.textContent = ''; pumpFlow('OFF', msg); return; }
+        if (/(kejadian|riwayat|alert|log)/.test(t)) { msg.textContent = ''; fill(msg, recentText()); return; }
+        if (/(status|level|kondisi|air|berapa|tangki)/.test(t)) { renderStatusCard(msg); return; }
+        msg.textContent = ''; fill(msg, 'Saya belum paham. Coba "status", "nyalakan pompa", "matikan pompa", atau "bantuan".');
+      }, 450);
     }
+
     $('chatForm').addEventListener('submit', function (e) { e.preventDefault(); var i = $('chatInput'); ask(i.value); i.value = ''; });
-    $('chatChips').addEventListener('click', function (e) { var q = e.target && e.target.getAttribute && e.target.getAttribute('data-q'); if (q) ask(q); });
-    say('Halo, saya asisten tangki. Tanya "status" atau suruh saya menyalakan dan mematikan pompa.', 'bot');
+    $('chatChips').addEventListener('click', function (e) { var b = e.target && e.target.closest ? e.target.closest('button') : null; var q = b && b.getAttribute('data-q'); if (q) ask(q); });
+    function greet() { say('Halo! Saya asisten tangki \uD83D\uDCA7\nTanya "status" untuk melihat kartu kondisi, atau suruh saya menyalakan dan mematikan pompa.', 'bot'); }
+    $('chatClear').addEventListener('click', function () { logEl.innerHTML = ''; pending = null; greet(); });
+
+    // indikator di kepala obrolan
+    setInterval(function () {
+      var fresh = state.lastAt && Date.now() - state.lastAt < STALE_MS;
+      $('chatDot').className = 'cdot' + (state.online && fresh ? ' on' : '');
+      $('chatStatus').textContent = state.online && fresh ? 'online, data ' + Math.round((Date.now() - state.lastAt) / 1000) + ' dtk lalu' : state.demo ? 'mode demo' : 'menunggu perangkat';
+    }, 1000);
+    greet();
   })();
 
   // ----- awal -----
