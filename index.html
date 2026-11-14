@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e161d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Dashboard Smart Water Tank</title>
+<style>
+  :root {
+    --bg:#06141f; --bg2:#0a1d2b; --panel:#0d2232; --panel2:#11293b; --ink:#e8f4fb; --muted:#8fb0c4; --line:#1d3a50;
+    --water:#3ec1f0; --water-deep:#1b8fc4; --foam:#bfeaff;
+    --ok:#4fd6a0; --warn:#f2b84b; --bad:#ff7a73;
+    --ok-bg:rgba(79,214,160,.14); --warn-bg:rgba(242,184,75,.15); --bad-bg:rgba(255,122,115,.16); --off-bg:rgba(143,176,196,.12);
+    --glow:rgba(62,193,240,.16); --radius:16px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg:#eaf4fa; --bg2:#dcecf6; --panel:#ffffff; --panel2:#f3f9fd; --ink:#0b2233; --muted:#52748a; --line:#cfe1ec;
+      --water:#1f9fd6; --water-deep:#13709f; --foam:#7fd0f3;
+      --ok:#14825a; --warn:#a96a00; --bad:#c3372f;
+      --ok-bg:#dff3ea; --warn-bg:#fcefd2; --bad-bg:#fbe3e1; --off-bg:#e3eef5; --glow:rgba(31,159,214,.14); }
+  }
+  :root[data-theme="light"] { --bg:#eaf4fa; --bg2:#dcecf6; --panel:#ffffff; --panel2:#f3f9fd; --ink:#0b2233; --muted:#52748a; --line:#cfe1ec;
+      --water:#1f9fd6; --water-deep:#13709f; --foam:#7fd0f3;
+      --ok:#14825a; --warn:#a96a00; --bad:#c3372f;
+      --ok-bg:#dff3ea; --warn-bg:#fcefd2; --bad-bg:#fbe3e1; --off-bg:#e3eef5; --glow:rgba(31,159,214,.14); }
+  * { box-sizing:border-box; }
+  html { background:var(--bg); }
+  body { margin:0; color:var(--ink); font:15px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    background:radial-gradient(1200px 520px at 15% -10%, var(--glow), transparent 60%), linear-gradient(var(--bg), var(--bg2)) fixed; min-height:100vh; }
+  .wrap { max-width:1120px; margin:0 auto; padding:22px 16px 56px; }
+  header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:16px; }
+  h1 { font:600 1.7rem/1.1 "Segoe UI Variable Display","Segoe UI",system-ui,sans-serif; margin:0; letter-spacing:-.01em; }
+  .sub { margin:4px 0 0; color:var(--muted); font-size:.9rem; }
+  h2 { font-size:1rem; font-weight:600; margin:0 0 12px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:999px; font-size:.82rem; background:var(--off-bg); color:var(--muted); }
+  .chip i { width:8px; height:8px; border-radius:50%; background:var(--muted); display:inline-block; }
+  .chip.ok { background:var(--ok-bg); color:var(--ok); } .chip.ok i { background:var(--ok); animation:ping 2s infinite; }
+  .chip.bad { background:var(--bad-bg); color:var(--bad); } .chip.bad i { background:var(--bad); }
+  .chip.warn { background:var(--warn-bg); color:var(--warn); } .chip.warn i { background:var(--warn); }
+  @keyframes ping { 0%{box-shadow:0 0 0 0 rgba(79,214,160,.55)} 70%,100%{box-shadow:0 0 0 7px rgba(79,214,160,0)} }
+
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px; }
+  .banner { padding:10px 16px; margin-bottom:16px; display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px; }
+  .banner h2 { margin:0; font-size:.85rem; color:var(--muted); font-weight:500; }
+  #steps { display:flex; flex-wrap:wrap; gap:4px 18px; list-style:none; margin:0; padding:0; font-size:.85rem; }
+
+  .stage { display:grid; gap:16px; grid-template-columns:minmax(300px,420px) 1fr; align-items:stretch; }
+  .stage > * { min-width:0; }
+  .tankbox { display:flex; flex-direction:column; align-items:center; padding:22px 18px 20px;
+    background:radial-gradient(420px 260px at 50% 0%, var(--glow), transparent 70%), var(--panel); }
+  .tankbox h2 { align-self:flex-start; }
+  .tankbox svg { width:min(250px,78%); height:auto; overflow:visible; }
+  .pct { font:200 5.2rem/1 "Segoe UI Variable Display","Segoe UI Light","Segoe UI",system-ui,sans-serif; font-variant-numeric:tabular-nums; letter-spacing:-.03em; margin-top:10px; }
+  .badge { margin-top:10px; padding:5px 16px; border-radius:999px; font-size:.9rem; font-weight:600; background:var(--off-bg); color:var(--muted); }
+  .badge.normal { background:var(--ok-bg); color:var(--ok); }
+  .badge.low { background:var(--warn-bg); color:var(--warn); }
+  .badge.critical_low, .badge.critical_high { background:var(--bad-bg); color:var(--bad); animation:blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity:.55; } }
+
+  .stack { display:grid; gap:16px; align-content:start; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); column-gap:18px; border-top:1px solid var(--line); }
+  .stat { padding:12px 4px 12px 0; border-bottom:1px solid var(--line); }
+  .stat small { display:block; color:var(--muted); font-size:.8rem; }
+  .stat b { display:block; font-size:1.5rem; font-weight:600; font-variant-numeric:tabular-nums; margin-top:1px; }
+  .on { color:var(--ok); } .off { color:var(--muted); } .alarm { color:var(--bad); }
+  .ctrl { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
+  .ctrl button { min-height:52px; font-size:1rem; font-weight:600; }
+  #btnOn:not(:disabled) { background:var(--ok-bg); border-color:var(--ok); color:var(--ok); }
+  #btnOff:not(:disabled) { background:var(--off-bg); border-color:var(--muted); }
+  svg.chart { width:100%; height:auto; display:block; }
+  .log { list-style:none; margin:0; padding:0; max-height:260px; overflow:auto; font-size:.88rem; }
+  .log li { padding:8px 0 8px 14px; border-left:2px solid var(--line); margin-left:4px; display:flex; gap:12px; position:relative; }
+  .log li::before { content:""; position:absolute; left:-5px; top:15px; width:8px; height:8px; border-radius:50%; background:var(--line); }
+  .log li:has(.t-alert)::before { background:var(--bad); }
+  .log time { color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .log .t-alert { color:var(--bad); font-weight:600; }
+  .empty { color:var(--muted); }
+
+  details.card { padding:0; margin-top:16px; }
+  details.card > summary { cursor:pointer; padding:16px 18px; font-weight:600; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+  details.card > summary::-webkit-details-marker { display:none; }
+  details.card > summary::after { content:"Buka"; color:var(--muted); font-weight:400; font-size:.85rem; }
+  details.card[open] > summary::after { content:"Tutup"; }
+  details.card > .body { padding:0 18px 18px; border-top:1px solid var(--line); }
+  .cols { display:grid; gap:20px; grid-template-columns:1fr 1fr; }
+  .cols > * { min-width:0; }
+
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  button { font:inherit; padding:8px 16px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--ink); cursor:pointer; transition:border-color .15s, background .15s; }
+  button:hover:not(:disabled) { border-color:var(--water); }
+  button.primary { background:var(--water-deep); border-color:var(--water-deep); color:#fff; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button:focus-visible, input:focus-visible, summary:focus-visible { outline:2px solid var(--water); outline-offset:2px; }
+  #btnInstall { display:none; }
+  label { display:block; font-size:.82rem; color:var(--muted); margin:10px 0 4px; }
+  input[type=text], input[type=password] { width:100%; font:inherit; padding:9px 11px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+  input[type=checkbox] { accent-color:var(--water); }
+  .note { color:var(--muted); font-size:.82rem; margin:10px 0 0; overflow-wrap:anywhere; }
+  code { overflow-wrap:anywhere; }
+  .wave1 { animation:drift 5s linear infinite; } .wave2 { animation:drift 8s linear infinite reverse; }
+  @keyframes drift { to { transform:translateX(-70px); } }
+  @media (prefers-reduced-motion: reduce) { .wave1,.wave2,.badge,.chip i { animation:none !important; } }
+  @media (max-width:820px) { .stage,.cols { grid-template-columns:1fr; } .pct { font-size:4.4rem; } }
+  @media (max-width:820px) { button { min-height:44px; } input[type=text], input[type=password] { min-height:44px; font-size:16px; } .wrap { padding-left:max(16px, env(safe-area-inset-left)); padding-right:max(16px, env(safe-area-inset-right)); } }
+
+  .card { backdrop-filter: blur(6px); transition: transform .2s ease, box-shadow .2s ease, border-color .2s; }
+  .stage .card:hover, #logCard:hover { border-color: color-mix(in srgb, var(--water) 45%, var(--line)); }
+  .tankbox { position:relative; transition: box-shadow .4s, border-color .4s; }
+  .tankbox.st-normal { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); box-shadow: 0 0 40px -12px var(--ok); }
+  .tankbox.st-low { border-color: var(--warn); box-shadow: 0 0 44px -10px var(--warn); }
+  .tankbox.st-crit { border-color: var(--bad); box-shadow: 0 0 52px -8px var(--bad); }
+  .icon { padding:6px 12px; border-radius:999px; font-size:.82rem; }
+  a.chip { text-decoration:none; cursor:pointer; border:1px solid var(--line); }
+  a.chip:hover { border-color:var(--water); color:var(--ink); }
+  .stat { transition: background .2s; border-radius:8px; padding-left:8px; margin-left:-8px; }
+  .stat:hover { background: var(--off-bg); }
+  .ctrl button { position:relative; overflow:hidden; transition: transform .12s, box-shadow .2s, background .2s; }
+  .ctrl button:active:not(:disabled) { transform: scale(.97); }
+  .ctrl button.active { box-shadow: 0 0 0 2px var(--water), 0 0 22px -4px var(--water); }
+  .chips-scen { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+  .chips-scen button { padding:5px 12px; border-radius:999px; font-size:.82rem; min-height:0; }
+  .chips-scen span { color:var(--muted); font-size:.8rem; margin-right:4px; }
+  #pipe { opacity:0; transition:opacity .3s; } .pumping #pipe { opacity:1; }
+  #pipe path.flow { stroke-dasharray:6 6; animation:flow .6s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset:-12; } }
+  #bubbles circle { opacity:0; fill:var(--foam); }
+  .pumping #bubbles circle { animation:rise 3.2s ease-in infinite; }
+  #bubbles circle:nth-child(2) { animation-delay:.7s !important; } #bubbles circle:nth-child(3) { animation-delay:1.4s !important; }
+  #bubbles circle:nth-child(4) { animation-delay:2.1s !important; } #bubbles circle:nth-child(5) { animation-delay:2.7s !important; }
+  @keyframes rise { 0% { transform:translateY(0); opacity:0; } 15% { opacity:.7; } 100% { transform:translateY(-150px); opacity:0; } }
+  #toasts { position:fixed; right:16px; bottom:16px; display:grid; gap:8px; z-index:20; max-width:min(360px, calc(100vw - 32px)); }
+  .toast { background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-left:4px solid var(--water); border-radius:12px; padding:10px 14px; font-size:.88rem; box-shadow:0 10px 30px -10px rgba(0,0,0,.5); animation:tin .25s ease-out; }
+  .toast.alert { border-left-color:var(--bad); } .toast.ok { border-left-color:var(--ok); }
+  @keyframes tin { from { transform:translateY(12px); opacity:0; } }
+  .tip { pointer-events:none; }
+  svg.chart { touch-action:pan-y; cursor:crosshair; }
+  @media (prefers-reduced-motion: reduce) { #bubbles circle, #pipe path.flow, .toast { animation:none !important; } }
+
+  .chat { display:grid; gap:10px; }
+  #chatLog { display:flex; flex-direction:column; gap:8px; max-height:300px; min-height:140px; overflow:auto; padding:4px 2px; scroll-behavior:smooth; }
+  .msg { max-width:86%; padding:8px 12px; border-radius:14px; font-size:.92rem; white-space:pre-wrap; overflow-wrap:anywhere; animation:tin .2s ease-out; }
+  .msg.bot { align-self:flex-start; background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:4px; }
+  .msg.me { align-self:flex-end; background:var(--water-deep); color:#fff; border-bottom-right-radius:4px; }
+  .msg.typing { color:var(--muted); }
+  #chatForm { display:flex; gap:8px; }
+  #chatForm input { flex:1; }
+  #chatChips { display:flex; gap:6px; flex-wrap:wrap; }
+  #chatChips button { padding:5px 12px; border-radius:999px; font-size:.82rem; min-height:0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Smart Water Tank</h1>
+      <p class="sub">Level air, pompa, dan alert dari ESP32</p>
+    </div>
+    <div class="chips">
+      <a class="chip icon" id="lnkBot" href="https://t.me/Testisuubot" target="_blank" rel="noopener" title="Buka bot Telegram, lalu kirim /daftar untuk menerima alert">Terima alert di Telegram</a>
+      <button class="chip icon" id="btnTheme" type="button" title="Ganti tema gelap atau terang">Tema</button>
+      <span class="chip" id="chipMqtt"><i></i><span>MQTT: belum tersambung</span></span>
+      <span class="chip" id="chipDevice"><i></i><span>ESP32: menunggu data</span></span>
+    </div>
+  </header>
+
+  <section class="card banner" id="hintCard" aria-label="Status sambungan">
+    <h2>Status sambungan</h2>
+    <ol id="steps"></ol>
+  </section>
+
+  <div class="stage">
+    <section class="card tankbox" id="tankbox" aria-label="Level air">
+      <h2>Level air</h2>
+      <svg viewBox="0 0 220 260" role="img" aria-label="Tangki air" id="tankSvg">
+        <defs>
+          <clipPath id="clipTank"><rect x="30" y="20" width="140" height="220" rx="16"/></clipPath>
+          <linearGradient id="waterG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--water)"/><stop offset="1" stop-color="var(--water-deep)"/></linearGradient>
+          <linearGradient id="areaG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--water)" stop-opacity=".45"/><stop offset="1" stop-color="var(--water)" stop-opacity="0"/></linearGradient>
+        </defs>
+        <rect x="30" y="20" width="140" height="220" rx="16" fill="var(--bg)" opacity=".55"/>
+        <g clip-path="url(#clipTank)">
+          <rect x="30" y="20" width="140" height="22" fill="var(--bad)" opacity=".14"/>
+          <rect x="30" y="42" width="140" height="11" fill="var(--warn)" opacity=".12"/>
+          <rect x="30" y="185" width="140" height="22" fill="var(--warn)" opacity=".12"/>
+          <rect x="30" y="207" width="140" height="33" fill="var(--bad)" opacity=".14"/>
+          <rect id="water" x="30" y="240" width="140" height="0" fill="url(#waterG)"/>
+          <g id="wave" transform="translate(0,240)">
+            <g class="wave2" opacity=".45"><path d="M-10 -2 Q 7.5 -9 25 -2 T 60 -2 T 95 -2 T 130 -2 T 165 -2 T 200 -2 T 235 -2 T 270 -2 V 30 H -10 Z" fill="var(--foam)"/></g>
+            <g class="wave1"><path d="M-10 0 Q 7.5 -7 25 0 T 60 0 T 95 0 T 130 0 T 165 0 T 200 0 T 235 0 T 270 0 V 260 H -10 Z" fill="url(#waterG)"/></g>
+          </g>
+          <rect id="waterTop" x="30" y="240" width="140" height="4" fill="none"/>
+        </g>
+        <g id="bubbles" clip-path="url(#clipTank)">
+          <circle cx="62" cy="232" r="3"/><circle cx="92" cy="236" r="2.2"/><circle cx="118" cy="230" r="3.4"/><circle cx="146" cy="234" r="2.4"/><circle cx="78" cy="238" r="1.8"/>
+        </g>
+        <g id="pipe" fill="none" stroke="var(--water)" stroke-width="5" stroke-linecap="round">
+          <path d="M4 56 H30" opacity=".35"/><path class="flow" d="M4 56 H30" stroke="var(--foam)" stroke-width="2"/>
+        </g>
+        <g id="marks" font-size="10" fill="var(--muted)"></g>
+        <rect x="30" y="20" width="140" height="220" rx="16" fill="none" stroke="var(--muted)" stroke-width="2" opacity=".8"/>
+      </svg>
+      <div class="pct" id="pct">--</div>
+      <span class="badge" id="badge">menunggu data</span>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <h2>Pembacaan terakhir</h2>
+        <div class="stats">
+          <div class="stat"><small>Jarak sensor</small><b id="dist">--</b></div>
+          <div class="stat"><small>Pompa</small><b id="pump" class="off">--</b></div>
+          <div class="stat"><small>Mode</small><b id="mode">--</b></div>
+          <div class="stat"><small>Buzzer</small><b id="buzz" class="off">--</b></div>
+          <div class="stat"><small>Data terakhir</small><b id="age">--</b></div>
+        </div>
+        <h2 style="margin-top:18px">Kontrol pompa</h2>
+        <div class="ctrl">
+          <button id="btnOn" disabled>Nyalakan pompa</button>
+          <button id="btnOff" disabled>Matikan pompa</button>
+        </div>
+        <div class="chips-scen" id="scen" hidden><span>Skenario demo:</span><button type="button" data-lv="50">50% normal</button><button type="button" data-lv="24">24% pompa ON</button><button type="button" data-lv="12">12% kritis rendah</button><button type="button" data-lv="85">85% pompa OFF</button><button type="button" data-lv="92">92% kritis tinggi</button></div>
+        <p class="note">Aturan di ESP32 tetap berlaku: perintah ON ditolak saat level 85% atau lebih, perintah OFF ditolak saat level di bawah 25%.</p>
+      </section>
+
+      <section class="card">
+        <h2>Riwayat level (%)</h2>
+        <svg class="chart" viewBox="0 0 640 200" id="chart" role="img" aria-label="Grafik level air"></svg>
+      </section>
+    </div>
+  </div>
+
+    <section class="card chat" id="chatCard" style="margin-top:16px" aria-label="Asisten tangki">
+    <h2 style="margin:0">Asisten tangki</h2>
+    <div id="chatLog" role="log" aria-live="polite"></div>
+    <div id="chatChips">
+      <button type="button" data-q="status">Status</button>
+      <button type="button" data-q="nyalakan pompa">Nyalakan pompa</button>
+      <button type="button" data-q="matikan pompa">Matikan pompa</button>
+      <button type="button" data-q="kejadian terakhir">Kejadian terakhir</button>
+      <button type="button" data-q="bantuan">Bantuan</button>
+    </div>
+    <form id="chatForm" autocomplete="off">
+      <input type="text" id="chatInput" placeholder="Ketik: status, nyalakan pompa, matikan pompa" aria-label="Pesan untuk asisten">
+      <button class="primary" type="submit">Kirim</button>
+    </form>
+  </section>
+
+  <section class="card" id="logCard" style="margin-top:16px">
+    <h2>Alert dan kejadian</h2>
+    <ul class="log" id="log"><li class="empty">Belum ada kejadian.</li></ul>
+  </section>
+
+  <details class="card">
+    <summary>Koneksi broker</summary>
+    <div class="body">
+      <label for="broker">Alamat broker (WebSocket)</label>
+      <input type="text" id="broker" value="wss://broker.hivemq.com:8884/mqtt">
+      <label for="base">Topik dasar (samakan dengan BASE_TOPIC di sketch)</label>
+      <input type="text" id="base" value="kampus/iot/smart_water">
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="btnConnect">Sambungkan</button>
+        <button id="btnDemo">Mode demo</button>
+        <button id="btnInstall">Pasang aplikasi</button>
+      </div>
+      <p class="note">Broker publik HiveMQ bisa dibaca siapa saja. Beri akhiran unik pada topik dasar (misalnya <code>kampus/iot/smart_water_12345</code>) di sketch dan di sini.</p>
+      <p class="note" id="topicList"></p>
+    </div>
+  </details>
+
+  <details class="card" id="tgBox">
+    <summary>Bot Telegram</summary>
+    <div class="body">
+      <p class="note">Cara termudah menerima alert: buka <a href="https://t.me/Testisuubot" target="_blank" rel="noopener" style="color:var(--water)">@Testisuubot</a> di Telegram dan kirim <code>/daftar</code>. Bot berjalan di server, jadi tidak perlu mengisi token di halaman ini. Formulir di bawah hanya untuk memakai bot Anda sendiri langsung dari browser.</p>
+      <div class="cols">
+        <div>
+          <label for="tgToken">Token bot (dari @BotFather)</label>
+          <input type="password" id="tgToken" autocomplete="off" placeholder="123456789:AA...">
+          <label for="tgChat">Chat ID</label>
+          <input type="text" id="tgChat" autocomplete="off" placeholder="contoh 123456789 atau -100123456789">
+          <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="tgOn"> Kirim alert ke Telegram (level kritis dan perangkat offline)</label>
+          <label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="tgCmds"> Terima perintah dari Telegram (/status, /pompa_on, /pompa_off)</label>
+          <div class="row" style="margin-top:12px">
+            <button class="primary" id="tgSave">Simpan</button>
+            <button id="tgTest">Kirim pesan tes</button>
+            <button id="tgFind">Cari chat ID</button>
+          </div>
+          <p class="note" id="tgState">Telegram belum diatur.</p>
+        </div>
+        <div>
+          <p class="note" style="margin-top:10px"><b>Cara menyambungkan</b></p>
+          <ol class="note" style="margin:6px 0 0;padding-left:18px">
+            <li>Di Telegram, chat ke <b>@BotFather</b>, kirim <code>/newbot</code>, salin token yang diberikan.</li>
+            <li>Buka bot baru Anda, tekan Start dan kirim pesan apa saja.</li>
+            <li>Tempel token di sini, klik <b>Cari chat ID</b>, lalu <b>Simpan</b>.</li>
+            <li>Klik <b>Kirim pesan tes</b>. Jika pesan masuk, centang kirim alert.</li>
+          </ol>
+          <p class="note">Token disimpan di browser ini saja (localStorage) dan hanya dikirim ke api.telegram.org. Alert dan perintah hanya berjalan selama halaman ini terbuka; untuk jalan terus tanpa browser pakai flow Node-RED. Jangan aktifkan keduanya dengan bot yang sama, karena alert akan ganda dan penerimaan perintah saling bentrok.</p>
+        </div>
+      </div>
+    </div>
+  </details>
+</div>
+<div id="toasts" role="status" aria-live="polite"></div>
+
+<script src="mqtt.min.js"></script>
+<script>window.mqtt || document.write('<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"><\/script>');</script>
+<script>
+(function () {
+  'use strict';
+  // ----- konstanta yang sama dengan sketch.ino -----
+  var LOW_CRIT = 15, PUMP_ON_BELOW = 25, PUMP_OFF_AT = 85, HIGH_CRIT = 90;
+  var D_KOSONG = 100, D_PENUH = 5;
+  var MAX_POINTS = 60, STALE_MS = 15000;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { client: null, demo: false, demoTimer: null, last: null, lastAt: 0, points: [], times: [], pump: 'OFF', mode: '--', buzzer: 'OFF', online: null };
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var savedBroker = store('sw_broker'), savedBase = store('sw_base');
+  if (savedBroker) $('broker').value = savedBroker;
+  if (savedBase) $('base').value = savedBase;
+
+  function chip(el, cls, text) { el.className = 'chip' + (cls ? ' ' + cls : ''); el.lastElementChild.textContent = text; }
+  function clock() { return new Date().toLocaleTimeString('id-ID', { hour12: false }); }
+
+  function toast(text, kind) {
+    var box = $('toasts'), t = document.createElement('div');
+    t.className = 'toast' + (kind ? ' ' + kind : ''); t.textContent = text;
+    box.appendChild(t);
+    while (box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, kind === 'alert' ? 9000 : 4500);
+  }
+  function logEvent(text, kind) {
+    if (kind === 'alert') toast(text, 'alert');
+    var ul = $('log');
+    if (ul.firstElementChild && ul.firstElementChild.className === 'empty') ul.innerHTML = '';
+    var li = document.createElement('li');
+    var t = document.createElement('time'); t.textContent = clock();
+    var s = document.createElement('span'); s.textContent = text; if (kind) s.className = 't-' + kind;
+    li.appendChild(t); li.appendChild(s);
+    ul.insertBefore(li, ul.firstChild);
+    while (ul.children.length > 40) ul.removeChild(ul.lastChild);
+  }
+
+  // ----- gambar tangki -----
+  (function drawMarks() {
+    var g = $('marks');
+    [LOW_CRIT, PUMP_ON_BELOW, PUMP_OFF_AT, HIGH_CRIT].forEach(function (v) {
+      var y = 240 - 220 * v / 100;
+      var ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', 30); ln.setAttribute('x2', 170); ln.setAttribute('y1', y); ln.setAttribute('y2', y);
+      ln.setAttribute('stroke', v === LOW_CRIT || v === HIGH_CRIT ? 'var(--bad)' : 'var(--muted)');
+      ln.setAttribute('stroke-dasharray', '4 3'); ln.setAttribute('stroke-width', '1');
+      g.appendChild(ln);
+      var tx = document.createElementNS(NS, 'text');
+      tx.setAttribute('x', 174); tx.setAttribute('y', y + 3); tx.textContent = v + '%';
+      g.appendChild(tx);
+    });
+  })();
+
+  var shown = 0, target = 0, tween = 0;
+  function setLevel(pct) {
+    target = pct;
+    if (tween) return;
+    if (Math.abs(target - shown) < 0.05) { shown = target; paintLevel(shown); return; }
+    tween = setInterval(function () {
+      var d = target - shown;
+      if (Math.abs(d) < 0.05) { shown = target; clearInterval(tween); tween = 0; } else shown += d * 0.2;
+      paintLevel(shown);
+    }, 30);
+  }
+  function paintLevel(pct) {
+    var h = 220 * Math.max(0, Math.min(100, pct)) / 100;
+    $('water').setAttribute('y', 240 - h); $('water').setAttribute('height', h);
+    $('waterTop').setAttribute('y', 240 - h); $('wave').setAttribute('transform', 'translate(0,' + (240 - h) + ')'); $('wave').style.display = h > 0 ? '' : 'none';
+    $('pct').textContent = pct.toFixed(1) + '%';
+  }
+
+  var STATUS_TEXT = { normal: 'Normal', low: 'Rendah', critical_low: 'Kritis: terlalu rendah', critical_high: 'Kritis: terlalu tinggi' };
+
+  function renderStatus() {
+    var p = $('pump'); p.textContent = state.pump === 'ON' ? 'ON' : state.pump === 'OFF' ? 'OFF' : '--';
+    p.className = state.pump === 'ON' ? 'on' : 'off';
+    $('mode').textContent = state.mode;
+    var b = $('buzz'); b.textContent = state.buzzer === 'ON' ? 'BUNYI' : state.buzzer === 'OFF' ? 'Mati' : '--';
+    b.className = state.buzzer === 'ON' ? 'alarm' : 'off';
+    $('tankSvg').classList.toggle('pumping', state.pump === 'ON');
+    $('btnOn').classList.toggle('active', state.pump === 'ON');
+    $('btnOff').classList.toggle('active', state.pump === 'OFF');
+  }
+
+  var hoverIdx = -1;
+  function drawChart() {
+    var svg = $('chart'); svg.innerHTML = '';
+    var W = 640, H = 200, L = 34, R = 10, T = 10, B = 22;
+    function Y(v) { return T + (H - T - B) * (1 - v / 100); }
+    function el(n, a, txt) { var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); if (txt) e.textContent = txt; svg.appendChild(e); return e; }
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      el('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: 'var(--line)', 'stroke-width': 1 });
+      el('text', { x: L - 6, y: Y(v) + 3, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--muted)' }, String(v));
+    });
+    [[LOW_CRIT, 'var(--bad)'], [PUMP_ON_BELOW, 'var(--warn)'], [PUMP_OFF_AT, 'var(--warn)'], [HIGH_CRIT, 'var(--bad)']].forEach(function (t) {
+      el('line', { x1: L, x2: W - R, y1: Y(t[0]), y2: Y(t[0]), stroke: t[1], 'stroke-width': 1, 'stroke-dasharray': '5 4', opacity: .7 });
+    });
+    var pts = state.points;
+    if (!pts.length) { el('text', { x: W / 2, y: H / 2, 'text-anchor': 'middle', 'font-size': 13, fill: 'var(--muted)' }, 'Menunggu telemetri'); return; }
+    var n = Math.max(pts.length - 1, 1), step = (W - L - R) / (MAX_POINTS - 1);
+    var x0 = W - R - step * (pts.length - 1);
+    var d = pts.map(function (v, i) { return (i ? 'L' : 'M') + (x0 + step * i).toFixed(1) + ' ' + Y(v).toFixed(1); }).join(' ');
+    el('path', { d: d + ' L' + (x0 + step * (pts.length - 1)).toFixed(1) + ' ' + Y(0) + ' L' + x0.toFixed(1) + ' ' + Y(0) + ' Z', fill: 'url(#areaG)', stroke: 'none' });
+    el('path', { d: d, fill: 'none', stroke: 'var(--water)', 'stroke-width': 2, 'stroke-linejoin': 'round' });
+    el('circle', { cx: x0 + step * (pts.length - 1), cy: Y(pts[pts.length - 1]), r: 3.5, fill: 'var(--water)' });
+    if (hoverIdx >= 0 && hoverIdx < pts.length) {
+      var hx = x0 + step * hoverIdx, hv = pts[hoverIdx], tm = state.times[hoverIdx] || '';
+      el('line', { x1: hx, x2: hx, y1: T, y2: H - B, stroke: 'var(--foam)', 'stroke-width': 1, opacity: .8 });
+      el('circle', { cx: hx, cy: Y(hv), r: 5, fill: 'var(--bg)', stroke: 'var(--water)', 'stroke-width': 2.5 });
+      var label = hv.toFixed(1) + '%' + (tm ? '  ' + tm : ''), bw = 12 + label.length * 6.4, bx = Math.min(Math.max(hx - bw / 2, L), W - R - bw);
+      el('rect', { x: bx, y: 12, width: bw, height: 22, rx: 6, fill: 'var(--panel2)', stroke: 'var(--line)', class: 'tip' });
+      el('text', { x: bx + bw / 2, y: 27, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: 'var(--ink)', class: 'tip' }, label);
+    }
+    el('text', { x: L, y: H - 6, 'font-size': 10, fill: 'var(--muted)' }, 'lebih lama');
+    el('text', { x: W - R, y: H - 6, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--muted)' }, 'terbaru');
+  }
+
+  // ----- penanganan pesan -----
+  function onTelemetry(m) {
+    var lvl = Number(m.level_pct);
+    if (!isFinite(lvl)) return;
+    state.last = m; state.lastAt = Date.now();
+    setLevel(lvl);
+    $('dist').textContent = isFinite(Number(m.distance_cm)) ? Number(m.distance_cm).toFixed(1) + ' cm' : '--';
+    var bd = $('badge'); bd.className = 'badge ' + (m.status || ''); bd.textContent = STATUS_TEXT[m.status] || m.status || '--';
+    if (m.pump) state.pump = m.pump;
+    state.points.push(lvl); state.times.push(clock()); if (state.points.length > MAX_POINTS) { state.points.shift(); state.times.shift(); }
+    $('tankbox').className = 'card tankbox ' + (m.status === 'normal' ? 'st-normal' : m.status === 'low' ? 'st-low' : 'st-crit');
+    state.online = true;
+    chip($('chipDevice'), 'ok', 'ESP32: online (' + (m.device || 'esp32') + ')');
+    renderStatus(); drawChart();
+  }
+  var lastCrit = null;
+  function onStatus(m, retained) {
+    if (m.online === false) {
+      state.online = false;
+      if (retained) {
+        // pesan lama yang disimpan broker: Wokwi belum dijalankan, bukan kejadian baru
+        chip($('chipDevice'), 'warn', 'ESP32: belum aktif (jalankan Wokwi)');
+        logEvent('ESP32 belum terhubung ke broker. Jalankan simulasi Wokwi dan tunggu "[MQTT] ... berhasil".');
+        return;
+      }
+      chip($('chipDevice'), 'bad', 'ESP32: offline');
+      logEvent('Perangkat offline (pesan wasiat broker).', 'alert');
+      tgNotify('OFFLINE', 'ESP32 OFFLINE', 'Perangkat tidak terhubung ke broker MQTT.');
+      return;
+    }
+    if (m.pump) state.pump = m.pump;
+    if (m.mode) state.mode = m.mode;
+    if (m.buzzer) state.buzzer = m.buzzer;
+    state.online = true;
+    chip($('chipDevice'), 'ok', 'ESP32: online (' + (m.device || 'esp32') + ')');
+    renderStatus();
+    logEvent('Status: pompa ' + state.pump + ', mode ' + state.mode + ', buzzer ' + state.buzzer + '.');
+  }
+  function onAlert(m) {
+    logEvent((m.type || 'ALERT') + ': ' + (m.message || '') + ' (level ' + (isFinite(Number(m.level_pct)) ? Number(m.level_pct).toFixed(1) : '?') + '%)', 'alert');
+    var lv = isFinite(Number(m.level_pct)) ? Number(m.level_pct).toFixed(1) : '?';
+    tgNotify(m.type || 'ALERT', (m.type === 'CRITICAL_HIGH' ? 'ALERT: tangki hampir meluap' : m.type === 'CRITICAL_LOW' ? 'ALERT: tangki hampir kosong' : 'ALERT Smart Water Tank'), 'Level air ' + lv + '%. ' + (m.message || ''));
+  }
+  function handle(topic, payload, retained) {
+    var m; try { m = JSON.parse(payload); } catch (e) { return; }
+    var base = $('base').value.trim();
+    if (topic === base + '/telemetry') onTelemetry(m);
+    else if (topic === base + '/status') onStatus(m, retained);
+    else if (topic === base + '/alert') onAlert(m);
+  }
+
+  setInterval(function () {
+    if (!state.lastAt) { $('age').textContent = '--'; return; }
+    var s = Math.round((Date.now() - state.lastAt) / 1000);
+    $('age').textContent = s + ' dtk lalu';
+    if (state.online && Date.now() - state.lastAt > STALE_MS) chip($('chipDevice'), 'warn', 'ESP32: data lama, cek Wokwi');
+  }, 1000);
+
+  // ----- MQTT -----
+  function setCommandEnabled(on) { $('btnOn').disabled = !on; $('btnOff').disabled = !on; }
+
+  function connect() {
+    stopDemo();
+    if (typeof mqtt === 'undefined') { chip($('chipMqtt'), 'bad', 'MQTT: library gagal dimuat (cek internet)'); return; }
+    var url = $('broker').value.trim(), base = $('base').value.trim().replace(/\/+$/, '');
+    $('base').value = base;
+    store('sw_broker', url); store('sw_base', base);
+    if (state.client) { try { state.client.end(true); } catch (e) {} state.client = null; }
+    chip($('chipMqtt'), 'warn', 'MQTT: menyambung...');
+    $('topicList').textContent = [base + '/telemetry', base + '/status', base + '/alert', base + '/command (kirim perintah)'].join('  |  ');
+    var c = mqtt.connect(url, { clientId: 'dash-' + Math.random().toString(16).slice(2, 10), clean: true, reconnectPeriod: 3000, connectTimeout: 8000 });
+    state.client = c;
+    c.on('connect', function () {
+      chip($('chipMqtt'), 'ok', 'MQTT: tersambung');
+      c.subscribe([base + '/telemetry', base + '/status', base + '/alert'], { qos: 0 });
+      setCommandEnabled(true);
+      logEvent('Tersambung ke broker, menunggu data dari ESP32.');
+    });
+    c.on('reconnect', function () { chip($('chipMqtt'), 'warn', 'MQTT: menyambung ulang...'); setCommandEnabled(false); });
+    c.on('close', function () { if (state.client === c) { chip($('chipMqtt'), 'bad', 'MQTT: terputus'); setCommandEnabled(false); } });
+    c.on('error', function (e) { chip($('chipMqtt'), 'bad', 'MQTT: galat'); logEvent('Galat MQTT: ' + (e && e.message ? e.message : e), 'alert'); });
+    c.on('message', function (t, p, pkt) { handle(t, p.toString(), !!(pkt && pkt.retain)); });
+  }
+
+  function sendPump(value) {
+    var msg = { cmd: 'PUMP', value: value, source: 'dashboard' };
+    if (state.demo) { demoCommand(value); return; }
+    if (!state.client || !state.client.connected) return;
+    state.client.publish($('base').value.trim() + '/command', JSON.stringify(msg), { qos: 0 });
+    logEvent('Perintah dikirim: pompa ' + value + '. Hasilnya muncul di status.'); toast('Perintah pompa ' + value + ' dikirim ke ESP32', 'ok');
+  }
+  $('btnOn').addEventListener('click', function () { sendPump('ON'); });
+  $('btnOff').addEventListener('click', function () { sendPump('OFF'); });
+  $('btnConnect').addEventListener('click', connect);
+
+  // ----- mode demo (aturan sama dengan sketch.ino) -----
+  var demo = { level: 55, pump: false, manual: false, buzz: false, tick: 0, alertAt: [0, 0] };
+  function demoStatusMsg() { return { device: 'demo', pump: demo.pump ? 'ON' : 'OFF', mode: demo.manual ? 'MANUAL' : 'AUTO', buzzer: demo.buzz ? 'ON' : 'OFF' }; }
+  function demoCommand(value) {
+    var want = value === 'ON';
+    if (want && demo.level >= PUMP_OFF_AT) { logEvent('Perintah ditolak: tangki sudah penuh (85% atau lebih).'); onStatus(demoStatusMsg()); return; }
+    if (!want && demo.level < PUMP_ON_BELOW) { logEvent('Perintah ditolak: level di bawah 25%, pompa wajib ON.'); onStatus(demoStatusMsg()); return; }
+    demo.pump = want; demo.manual = true; onStatus(demoStatusMsg());
+  }
+  function demoStep() {
+    demo.tick++;
+    demo.level += demo.pump ? 4.5 : -3.2;   // pompa mengisi, pemakaian air menguras
+    demo.level = Math.max(0, Math.min(100, demo.level));
+    var changed = false;
+    if (demo.level < PUMP_ON_BELOW && !(demo.pump && !demo.manual)) { demo.pump = true; demo.manual = false; changed = true; }
+    else if (demo.level >= PUMP_OFF_AT && (demo.pump || demo.manual)) { demo.pump = false; demo.manual = false; changed = true; }
+    var crit = demo.level < LOW_CRIT || demo.level > HIGH_CRIT;
+    if (crit !== demo.buzz) { demo.buzz = crit; changed = true; }
+    if (changed) onStatus(demoStatusMsg());
+    var status = demo.level < LOW_CRIT ? 'critical_low' : demo.level > HIGH_CRIT ? 'critical_high' : demo.level < PUMP_ON_BELOW ? 'low' : 'normal';
+    onTelemetry({ device: 'demo', level_pct: demo.level, distance_cm: D_KOSONG - demo.level * (D_KOSONG - D_PENUH) / 100, pump: demo.pump ? 'ON' : 'OFF', status: status });
+    if (crit) {
+      var i = demo.level < LOW_CRIT ? 0 : 1;
+      if (Date.now() - demo.alertAt[i] > 60000) { demo.alertAt[i] = Date.now(); onAlert({ type: i ? 'CRITICAL_HIGH' : 'CRITICAL_LOW', level_pct: demo.level, message: i ? 'Level di atas 90%' : 'Level di bawah 15%' }); }
+    }
+  }
+  function startDemo() {
+    if (state.client) { try { state.client.end(true); } catch (e) {} state.client = null; }
+    state.demo = true; state.points = []; state.times = []; demo.level = 55; demo.pump = false; demo.manual = false; demo.buzz = false;
+    chip($('chipMqtt'), 'warn', 'Mode demo (tanpa broker)');
+    $('btnDemo').textContent = 'Hentikan demo';
+    setCommandEnabled(true); $('scen').hidden = false;
+    logEvent('Mode demo aktif: data disimulasikan di browser, bukan dari ESP32.');
+    demoStep(); state.demoTimer = setInterval(demoStep, 1000);
+  }
+  function stopDemo() {
+    if (!state.demo) return;
+    clearInterval(state.demoTimer); state.demo = false;
+    $('btnDemo').textContent = 'Mode demo'; $('scen').hidden = true;
+    setCommandEnabled(false);
+    state.points = []; state.times = []; drawChart();
+  }
+  $('btnDemo').addEventListener('click', function () { state.demo ? (stopDemo(), chip($('chipMqtt'), '', 'MQTT: belum tersambung')) : startDemo(); });
+
+  // ----- Telegram -----
+  var TG_COOLDOWN = 60000;
+  var tg = { on: store('sw_tg_on') === '1', cmds: store('sw_tg_cmds') === '1', token: store('sw_tg_token') || '', chat: store('sw_tg_chat') || '', offset: 0, gen: 0, last: {} };
+  $('tgToken').value = tg.token; $('tgChat').value = tg.chat; $('tgOn').checked = tg.on; $('tgCmds').checked = tg.cmds;
+
+  function tgState(text, cls) { var p = $('tgState'); p.textContent = text; p.style.color = cls === 'bad' ? 'var(--bad)' : cls === 'ok' ? 'var(--ok)' : ''; }
+  function tgApi(method, params, signal) {
+    if (!tg.token) return Promise.reject(new Error('token belum diisi'));
+    return fetch('https://api.telegram.org/bot' + tg.token + '/' + method, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params || {}), signal: signal
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.ok) throw new Error(j.description || 'ditolak Telegram');
+      return j.result;
+    });
+  }
+  function tgSend(text) { return tg.token && tg.chat ? tgApi('sendMessage', { chat_id: tg.chat, text: text }) : Promise.reject(new Error('token atau chat ID kosong')); }
+
+  function tgNotify(type, title, detail) {
+    if (!tg.on) return;
+    var now = Date.now();
+    if (tg.last[type] && now - tg.last[type] < TG_COOLDOWN) return;   // batasi 1 pesan per jenis per menit
+    tg.last[type] = now;
+    var text = title + '\n' + detail + '\nPompa: ' + state.pump + '\nWaktu: ' + new Date().toLocaleString('id-ID', { hour12: false });
+    tgSend(text).then(function () { logEvent('Telegram terkirim: ' + type + '.'); toast('Notifikasi Telegram terkirim', 'ok'); })
+      .catch(function (e) { logEvent('Telegram gagal (' + type + '): ' + e.message, 'alert'); });
+  }
+
+  function statusText() {
+    var m = state.last;
+    if (!m) return 'Belum ada data dari ESP32.';
+    return 'Level: ' + Number(m.level_pct).toFixed(1) + '% (' + (STATUS_TEXT[m.status] || m.status) + ')\nJarak sensor: ' + Number(m.distance_cm).toFixed(1) + ' cm\nPompa: ' + state.pump + ' (' + state.mode + ')\nBuzzer: ' + state.buzzer +
+      '\nData terakhir: ' + Math.round((Date.now() - state.lastAt) / 1000) + ' detik lalu';
+  }
+  function tgReply(t) { tgSend(t).catch(function (e) { logEvent('Telegram gagal membalas: ' + e.message, 'alert'); }); }
+  function tgCommand(msg) {
+    if (!msg || !msg.text || !msg.chat) return;
+    if (String(msg.chat.id) !== String(tg.chat)) { logEvent('Pesan Telegram dari chat lain diabaikan.'); return; }
+    var cmd = msg.text.trim().split(/\s+/)[0].toLowerCase().replace(/@.*$/, '');
+    if (cmd === '/status') tgReply(statusText());
+    else if (cmd === '/pompa_on' || cmd === '/pompa_off') {
+      var v = cmd === '/pompa_on' ? 'ON' : 'OFF';
+      if (!state.demo && !(state.client && state.client.connected)) { tgReply('Dashboard belum tersambung ke broker MQTT.'); return; }
+      logEvent('Perintah dari Telegram: pompa ' + v + '.');
+      sendPump(v);
+      tgReply('Perintah pompa ' + v + ' dikirim. ESP32 menolak bila melanggar batas level (ON di 85% ke atas, OFF di bawah 25%). Cek /status.');
+    } else tgReply('Perintah: /status, /pompa_on, /pompa_off');
+  }
+  function tgLoop(gen) {
+    if (gen !== tg.gen || !tg.cmds || !tg.token || !tg.chat) return;
+    tgApi('getUpdates', { offset: tg.offset, timeout: 25, allowed_updates: ['message'] }).then(function (list) {
+      if (gen !== tg.gen) return;
+      list.forEach(function (u) { tg.offset = u.update_id + 1; tgCommand(u.message); });
+      tgState('Terhubung ke bot, menerima perintah.', 'ok');
+      tgLoop(gen);
+    }).catch(function (e) {
+      if (gen !== tg.gen) return;
+      tgState('Penerimaan perintah gagal: ' + e.message + '. Mencoba lagi...', 'bad');
+      setTimeout(function () { tgLoop(gen); }, 6000);
+    });
+  }
+  function tgRestart() {
+    tg.gen++;
+    if (tg.cmds && tg.token && tg.chat) {
+      // lewati pesan lama agar perintah lama tidak dijalankan ulang
+      var g = tg.gen;
+      tgApi('getUpdates', { offset: -1, timeout: 0 }).then(function (l) { if (l.length) tg.offset = l[l.length - 1].update_id + 1; }).catch(function () {}).then(function () { tgLoop(g); });
+    }
+  }
+  $('tgSave').addEventListener('click', function () {
+    tg.token = $('tgToken').value.trim(); tg.chat = $('tgChat').value.trim();
+    tg.on = $('tgOn').checked; tg.cmds = $('tgCmds').checked;
+    store('sw_tg_token', tg.token); store('sw_tg_chat', tg.chat); store('sw_tg_on', tg.on ? '1' : '0'); store('sw_tg_cmds', tg.cmds ? '1' : '0');
+    tgState(tg.token && tg.chat ? 'Tersimpan. Alert ' + (tg.on ? 'aktif' : 'mati') + ', perintah ' + (tg.cmds ? 'aktif' : 'mati') + '.' : 'Tersimpan, tetapi token atau chat ID masih kosong.');
+    tgRestart();
+  });
+  $('tgTest').addEventListener('click', function () {
+    tg.token = $('tgToken').value.trim(); tg.chat = $('tgChat').value.trim();
+    tgState('Mengirim pesan tes...');
+    tgSend('Tes dari Dashboard Smart Water Tank. Jika pesan ini masuk, bot sudah tersambung.')
+      .then(function () { tgState('Pesan tes terkirim. Cek Telegram.', 'ok'); })
+      .catch(function (e) { tgState('Gagal: ' + e.message, 'bad'); });
+  });
+  $('tgFind').addEventListener('click', function () {
+    tg.token = $('tgToken').value.trim();
+    tgState('Mencari pesan terakhir ke bot...');
+    tgApi('getUpdates', { timeout: 0 }).then(function (list) {
+      var c = null;
+      list.forEach(function (u) { if (u.message && u.message.chat) c = u.message.chat; });
+      if (!c) { tgState('Belum ada pesan. Buka bot Anda di Telegram, kirim pesan apa saja, lalu klik lagi.', 'bad'); return; }
+      $('tgChat').value = c.id; tgState('Chat ID ditemukan: ' + c.id + ' (' + (c.first_name || c.title || c.username || '') + '). Klik Simpan.', 'ok');
+    }).catch(function (e) { tgState('Gagal: ' + e.message + '. Jika perintah Telegram aktif, matikan dulu lalu Simpan.', 'bad'); });
+  });
+  if (tg.token && tg.chat) { tgState('Alert ' + (tg.on ? 'aktif' : 'mati') + ', perintah ' + (tg.cmds ? 'aktif' : 'mati') + '.'); tgRestart(); }
+
+  // ----- panduan sambungan -----
+  var connectedAt = 0;
+  function renderSteps() {
+    var brokerOk = state.demo || !!(state.client && state.client.connected);
+    var data = state.lastAt && Date.now() - state.lastAt < STALE_MS;
+    var items = [
+      [brokerOk, 'Dashboard ke broker MQTT', brokerOk ? 'tersambung' : 'belum tersambung. Cek internet dan alamat broker, lalu klik Sambungkan.'],
+      [!!data, 'ESP32 (Wokwi) mengirim data', data ? 'data masuk' : (brokerOk ? 'belum ada data. Jalankan Wokwi, tunggu "[MQTT] ... berhasil" di Serial Monitor, dan pastikan topik dasar sama dengan BASE_TOPIC di sketch.' : 'menunggu sambungan broker')],
+      [tg.token && tg.chat && tg.on, 'Alert Telegram', tg.token && tg.chat ? (tg.on ? 'aktif' : 'belum dicentang') : 'belum diatur (opsional, lihat kartu Bot Telegram di bawah)']
+    ];
+    var ol = $('steps'); ol.innerHTML = '';
+    items.forEach(function (it) {
+      var li = document.createElement('li');
+      li.textContent = (it[0] ? '✓ ' : '✗ ') + it[1] + ': ' + it[2];
+      li.style.color = it[0] ? 'var(--ok)' : 'var(--muted)';
+      ol.appendChild(li);
+    });
+  }
+  setInterval(renderSteps, 1000); renderSteps();
+
+  // ----- PWA -----
+  var installEvt = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEvt = e; $('btnInstall').style.display = 'inline-block'; });
+  $('btnInstall').addEventListener('click', function () { if (installEvt) { installEvt.prompt(); installEvt = null; $('btnInstall').style.display = 'none'; } });
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(function () {});
+
+  // ----- interaksi: grafik, skenario demo, tema -----
+  function chartPointer(ev) {
+    var pts = state.points; if (!pts.length) return;
+    var svg = $('chart'), r = svg.getBoundingClientRect(), W = 640, L = 34, R = 10;
+    var x = (ev.clientX - r.left) * W / r.width, step = (W - L - R) / (MAX_POINTS - 1), x0 = W - R - step * (pts.length - 1);
+    hoverIdx = Math.max(0, Math.min(pts.length - 1, Math.round((x - x0) / step)));
+    drawChart();
+  }
+  $('chart').addEventListener('pointermove', chartPointer);
+  $('chart').addEventListener('pointerdown', chartPointer);
+  $('chart').addEventListener('pointerleave', function () { hoverIdx = -1; drawChart(); });
+  $('scen').addEventListener('click', function (e) {
+    var v = e.target && e.target.getAttribute && e.target.getAttribute('data-lv');
+    if (v === null || v === undefined || !state.demo) return;
+    demo.level = Number(v); demoStep(); toast('Skenario demo: level ' + v + '%');
+  });
+  (function theme() {
+    var t = store('sw_theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+    $('btnTheme').addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      var nx = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nx); store('sw_theme', nx);
+    });
+  })();
+
+  // ----- asisten obrolan (perintah teks, tanpa Telegram) -----
+  (function chatbot() {
+    var logEl = $('chatLog');
+    function say(text, who) {
+      var d = document.createElement('div'); d.className = 'msg ' + who; d.textContent = text;
+      logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; return d;
+    }
+    function statusReply() {
+      var m = state.last;
+      if (!m) return 'Belum ada data dari ESP32. Jalankan Wokwi dan tunggu "[MQTT] ... berhasil".';
+      var age = Math.round((Date.now() - state.lastAt) / 1000);
+      return 'Level ' + Number(m.level_pct).toFixed(1) + '% (' + (STATUS_TEXT[m.status] || m.status) + ')\n' +
+        'Jarak sensor ' + Number(m.distance_cm).toFixed(1) + ' cm\n' +
+        'Pompa ' + state.pump + ' (' + state.mode + '), buzzer ' + state.buzzer + '\n' +
+        'Data terakhir ' + age + ' detik lalu';
+    }
+    function canSend() { return state.demo || !!(state.client && state.client.connected); }
+    function pumpReply(v) {
+      if (!canSend()) return 'Belum tersambung ke broker, jadi perintah belum bisa dikirim. Cek kartu Status sambungan.';
+      sendPump(v);
+      return 'Perintah pompa ' + v + ' dikirim. ESP32 menolak bila melanggar batas (ON di 85% ke atas, OFF di bawah 25%). Ketik "status" untuk melihat hasilnya.';
+    }
+    function recentReply() {
+      var items = [].slice.call($('log').children).filter(function (li) { return li.className !== 'empty'; }).slice(0, 5);
+      if (!items.length) return 'Belum ada kejadian.';
+      return items.map(function (li) { return li.innerText.replace(/\s*\n\s*/g, '  '); }).join('\n');
+    }
+    var HELP = 'Yang bisa saya lakukan:\n- status atau level: kondisi tangki sekarang\n- nyalakan pompa / matikan pompa\n- kejadian terakhir: 5 kejadian terbaru\nAnda juga bisa memakai tombol di bawah.';
+    function answer(q) {
+      var t = q.toLowerCase().trim();
+      if (/^\/?(bantuan|help|\?)$/.test(t) || /bisa apa/.test(t)) return HELP;
+      if (/(nyalakan|hidupkan|aktifkan|pompa[ _]?on|pompa nyala)/.test(t)) return pumpReply('ON');
+      if (/(matikan|hentikan|nonaktifkan|pompa[ _]?off|pompa mati)/.test(t)) return pumpReply('OFF');
+      if (/(kejadian|riwayat|alert|log)/.test(t)) return recentReply();
+      if (/(status|level|kondisi|air|berapa|tangki)/.test(t)) return statusReply();
+      return 'Saya belum paham. Coba "status", "nyalakan pompa", "matikan pompa", atau "bantuan".';
+    }
+    function ask(q) {
+      if (!q.trim()) return;
+      say(q, 'me');
+      var typing = say('...', 'bot typing');
+      setTimeout(function () { typing.className = 'msg bot'; typing.textContent = answer(q); logEl.scrollTop = logEl.scrollHeight; }, 350);
+    }
+    $('chatForm').addEventListener('submit', function (e) { e.preventDefault(); var i = $('chatInput'); ask(i.value); i.value = ''; });
+    $('chatChips').addEventListener('click', function (e) { var q = e.target && e.target.getAttribute && e.target.getAttribute('data-q'); if (q) ask(q); });
+    say('Halo, saya asisten tangki. Tanya "status" atau suruh saya menyalakan dan mematikan pompa.', 'bot');
+  })();
+
+  // ----- awal -----
+  renderStatus(); drawChart(); setLevel(0); $('pct').textContent = '--';
+  $('topicList').textContent = $('base').value + '/telemetry  |  /status  |  /alert  |  /command';
+  window.__sw = { handle: handle, state: state };   // untuk pengujian
+  connect();
+})();
+</script>
+</body>
+</html>
