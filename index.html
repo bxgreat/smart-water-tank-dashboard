@@ -64,6 +64,8 @@
   @keyframes blink { 50% { opacity:.55; } }
 
   .stack { display:grid; gap:16px; align-content:start; }
+  .lcd { margin:14px 0 0; padding:10px 14px; background:#9fd36a; color:#1d3a0b; border-radius:8px; font:700 18px/1.35 ui-monospace,Consolas,monospace; letter-spacing:.08em; box-shadow:inset 0 0 0 3px #3b4a2a, inset 0 2px 8px rgba(0,0,0,.35); white-space:pre; overflow:hidden; }
+  .lcdcap { margin:14px 0 0; font-size:12px; color:var(--muted); }
   .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); column-gap:18px; border-top:1px solid var(--line); }
   .stat { padding:12px 4px 12px 0; border-bottom:1px solid var(--line); }
   .stat small { display:block; color:var(--muted); font-size:.8rem; }
@@ -248,6 +250,9 @@
           <div class="stat"><small>Buzzer</small><b id="buzz" class="off">--</b></div>
           <div class="stat"><small>Data terakhir</small><b id="age">--</b></div>
         </div>
+        <p class="lcdcap">Layar LCD di rangkaian (tiruan)</p>
+        <pre class="lcd" id="lcd" aria-label="Layar LCD 16x2">Menunggu data...
+</pre>
         <h2 style="margin-top:18px">Kontrol pompa</h2>
         <div class="ctrl">
           <button id="btnOn" disabled>Nyalakan pompa</button>
@@ -471,6 +476,10 @@
     $('dist').textContent = isFinite(Number(m.distance_cm)) ? Number(m.distance_cm).toFixed(1) + ' cm' : '--';
     var bd = $('badge'); bd.className = 'badge ' + (m.status || ''); bd.textContent = STATUS_TEXT[m.status] || m.status || '--';
     if (m.pump) state.pump = m.pump;
+    var lcdLabel = { normal: 'NORMAL', low: 'RENDAH', critical_low: 'KRITIS-', critical_high: 'KRITIS+' }[m.status] || '';
+    var l1 = 'Level:' + String(Math.round(lvl)).padStart(3) + '% P:' + (state.pump === 'ON' ? 'ON' : 'OFF');
+    var l2 = (isFinite(Number(m.distance_cm)) ? Number(m.distance_cm).toFixed(1) : '--').padStart(5) + 'cm ' + lcdLabel;
+    $('lcd').textContent = l1.padEnd(16).slice(0, 16) + '\n' + l2.padEnd(16).slice(0, 16);
     state.points.push(lvl); state.times.push(clock()); if (state.points.length > MAX_POINTS) { state.points.shift(); state.times.shift(); }
     $('tankbox').className = 'card tankbox ' + (m.status === 'normal' ? 'st-normal' : m.status === 'low' ? 'st-low' : 'st-crit');
     state.online = true;
